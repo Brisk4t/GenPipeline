@@ -3,8 +3,10 @@ from moviepy import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
 from moviepy.video.tools.subtitles import SubtitlesClip
 from elevenapi import elevenlabs_calls
 import uuid
+import os
+import subprocess
 
-def generate_video_with_subtitles(base_video_path, audio_path, text, word_timings, output_video_path):
+def generate_video_with_subtitles(base_video_path, audio_path, word_timings, output_video_path, str_uuid):
     # Load the base video and audio
     video = VideoFileClip(base_video_path)
     audio = AudioFileClip(audio_path)
@@ -12,43 +14,13 @@ def generate_video_with_subtitles(base_video_path, audio_path, text, word_timing
     # Set the audio to the video
     video = video.with_audio(audio)
 
-    # Create a list of Subtitle clips based on word timings
-    subtitle_clips = []
-
-    for word, timings in word_timings.items():
-        # Create a text clip for each word (with desired font size, color, etc.)
-        txt_clip = TextClip(text=word, font_size=24, color='white', font='C:\\Windows\\Fonts\\arial.ttf', duration=(timings[1] - timings[0]))
-        subtitle_clips.append(txt_clip)
-
-    
-
-
-
-    # Combine the video with the subtitles
-    video_with_subtitles = CompositeVideoClip([video] + subtitle_clips)
-
-    # Set the audio for the video
-    video_with_subtitles = video_with_subtitles.with_audio(audio)
-
-    # Write the final video to a file
-    video_with_subtitles.write_videofile(output_video_path, codec="libx264", audio_codec="aac")
-
-
-
-def generate_video_with_subtitles_2(base_video_path, audio_path, word_timings, output_video_path):
-    # Load the base video and audio
-    video = VideoFileClip(base_video_path)
-    audio = AudioFileClip(audio_path)
-
-    # Set the audio to the video
-    video = video.with_audio(audio)
 
     # Create SRT subtitles from word timings
-    create_srt_from_dict(word_timings)
+    create_srt_from_dict(word_timings, str_uuid)
 
     # Load subtitles
     generator = lambda text: TextClip('C:\\Windows\\Fonts\\arial.ttf',text=text, font_size=50, color='white', horizontal_align='center', size=video.size)
-    subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
+    subtitles = SubtitlesClip(f"temp/{str_uuid}_subtitles.srt", make_textclip=generator, encoding='utf-8')
 
     # Combine the video with the subtitles
     video_with_subtitles = CompositeVideoClip([video, subtitles], size=video.size)
@@ -59,9 +31,24 @@ def generate_video_with_subtitles_2(base_video_path, audio_path, word_timings, o
     # Write the final video to a file
     video_with_subtitles.write_videofile(output_video_path, fps=video.fps)
 
+def add_subtitles_to_video(video_file, output_video_file, audio_and_timings, str_uuid):
 
+    create_srt_from_dict(audio_and_timings[1], str_uuid)
+    command = [
+        'ffmpeg',
+        '-y',
+        '-i', video_file,  # Input video file
+        '-i', audio_and_timings[0], # Input audio file
+        '-vf', f"subtitles=temp/{str_uuid}_subtitles.srt",  # Apply subtitles filter
+        '-c:a', 'copy',  # Copy the audio without re-encoding
+        '-strict', 'experimental',  # Allows using the AAC codec in certain scenarios
+        '-c:v', 'libx264',  # Encode video in H.264 format
+        '-shortest',  # Ensure the video length matches the shortest input (either video or audio)
+        output_video_file  # Output video file with subtitles
+    ]
+    subprocess.run(command, check=True)
 
-def create_srt_from_dict(word_dict, output_filename="subtitles.srt"):
+def create_srt_from_dict(word_dict, output_filename):
     """
     Generates an SRT file from a dictionary where keys are words and values are tuples 
     representing (start_time, end_time) in seconds.
@@ -69,7 +56,8 @@ def create_srt_from_dict(word_dict, output_filename="subtitles.srt"):
     :param word_dict: Dictionary in the format {word: (start_time, end_time)}.
     :param output_filename: Name of the output SRT file.
     """
-    with open(output_filename, 'w') as file:
+    output_filename = 'temp/' + output_filename + '_subtitles.srt'
+    with open(output_filename, 'w', encoding='utf-8') as file:
         counter = 1
         for word, (start, end) in word_dict.items():
             # Convert start and end time to the SRT format (HH:MM:SS,MMM)
@@ -105,17 +93,22 @@ if __name__ == "__main__":
     creator = elevenlabs_calls()
 
     # Example usage
+    temp_location = "temp/"
+    str_uuid = str(uuid.uuid4())
+
+
     base_video_path = "BaseVideo9_16.mp4"  # Replace with your video file path
     output_video_path = "output_video.mp4"  # Path to save the output video
-    text = "Hello this is a test subtitle file for elevenlabs"
+    #text = "In a small village, a young girl named Yuki discovered she had the power to control time. Every day, she’d rewind moments to help others, whether it was saving a cat stuck in a tree or preventing a broken vase. But one day, a mysterious boy appeared, claiming to have the ability to erase time altogether. As they clashed, Yuki realized the boy was her future self, lost in a cycle of regret. Together, they learned that true strength wasn’t in controlling time, but in accepting the moments as they are, cherishing both the good and the bad."
+    text = "Hello this is a subtitle test for elevenlabs"
+
+    audio_and_timings = asyncio.run(creator.text_to_speech_timestamps(text, temp_location + str_uuid)) 
 
 
+    #generate_video_with_subtitles(base_video_path, audio_and_timings[0], text, audio_and_timings[1], output_video_path)
+    #generate_video_with_subtitles(base_video_path, audio_and_timings[0], audio_and_timings[1], output_video_path, str_uuid)
+    add_subtitles_to_video(base_video_path, output_video_path, audio_and_timings, str_uuid)
 
 
-    audio_timings = asyncio.run(creator.text_to_speech_timestamps(text, str(uuid.uuid4()))) 
-
-    print(audio_timings[1])
-
-
-    #generate_video_with_subtitles(base_video_path, audio_timings[0], text, audio_timings[1], output_video_path)
-    generate_video_with_subtitles_2(base_video_path, audio_timings[0], audio_timings[1], output_video_path)
+    # if os.path.exists(temp_location):
+    #     os.remove(temp_location)
