@@ -7,6 +7,9 @@ import os
 import subprocess
 
 def generate_video_with_subtitles(base_video_path, audio_path, word_timings, output_video_path, str_uuid):
+    """
+    Use a base video and audio file, stitch them together and add hard coded subtitles to the final video
+    """
     # Load the base video and audio
     video = VideoFileClip(base_video_path)
     audio = AudioFileClip(audio_path)
@@ -32,18 +35,23 @@ def generate_video_with_subtitles(base_video_path, audio_path, word_timings, out
     video_with_subtitles.write_videofile(output_video_path, fps=video.fps)
 
 def add_subtitles_to_video(video_file, output_video_file, audio_and_timings, str_uuid):
-
+    """
+    FFMPEG based video subtitling, significantly faster than moviepy
+    
+    
+    """
     create_srt_from_dict(audio_and_timings[1], str_uuid)
     command = [
         'ffmpeg',
         '-y',
         '-i', video_file,  # Input video file
         '-i', audio_and_timings[0], # Input audio file
-        '-vf', f"subtitles=temp/{str_uuid}_subtitles.srt",  # Apply subtitles filter
+        '-vf', f"subtitles=temp/{str_uuid}_subtitles.srt:charenc=UTF-8",  # Apply subtitles filter
+        '-map', '0:v:0',
+        '-map', '1:a:0',
         '-c:a', 'copy',  # Copy the audio without re-encoding
-        '-strict', 'experimental',  # Allows using the AAC codec in certain scenarios
         '-c:v', 'libx264',  # Encode video in H.264 format
-        '-shortest',  # Ensure the video length matches the shortest input (either video or audio)
+        '-b:a', '192k',
         output_video_file  # Output video file with subtitles
     ]
     subprocess.run(command, check=True)
@@ -57,7 +65,7 @@ def create_srt_from_dict(word_dict, output_filename):
     :param output_filename: Name of the output SRT file.
     """
     output_filename = 'temp/' + output_filename + '_subtitles.srt'
-    with open(output_filename, 'w', encoding='utf-8') as file:
+    with open(output_filename, 'w', encoding='UTF-8') as file:
         counter = 1
         for word, (start, end) in word_dict.items():
             # Convert start and end time to the SRT format (HH:MM:SS,MMM)
@@ -97,10 +105,11 @@ if __name__ == "__main__":
     str_uuid = str(uuid.uuid4())
 
 
-    base_video_path = "BaseVideo9_16.mp4"  # Replace with your video file path
+    base_video_path = "BaseVideo_9_16_2.mp4"  # Replace with your video file path
     output_video_path = "output_video.mp4"  # Path to save the output video
     #text = "In a small village, a young girl named Yuki discovered she had the power to control time. Every day, she’d rewind moments to help others, whether it was saving a cat stuck in a tree or preventing a broken vase. But one day, a mysterious boy appeared, claiming to have the ability to erase time altogether. As they clashed, Yuki realized the boy was her future self, lost in a cycle of regret. Together, they learned that true strength wasn’t in controlling time, but in accepting the moments as they are, cherishing both the good and the bad."
-    text = "Hello this is a subtitle test for elevenlabs"
+    #text = "Hello this is a subtitle test for elevenlabs"
+    text = "यामतो, एक कुशल समुराई, अपने गाँव की रक्षा के लिए काले जादूगर रोशिन से लड़ने निकला। उसकी तलवार चंद्रमा की रोशनी में चमकती थी। जादूगर ने अंधकार का जाल फैलाया, लेकिन यामतो की आत्मा अडिग रही। दोनों की तलवारें टकराईं, आग की चिंगारियाँ बिखरीं। एक अंतिम वार में यामतो ने रोशिन का अभिशाप तोड़ दिया। गाँव रोशनी से भर गया, लेकिन यामतो घुटनों पर गिर पड़ा। उसकी आँखों में संतोष था—वह जीत गया था। आखिरी सांस लेते हुए, वह मुस्कुराया। उसका नाम अमर हो गया, कहानियों में, हवाओं में, अनंत तक।"
 
     audio_and_timings = asyncio.run(creator.text_to_speech_timestamps(text, temp_location + str_uuid)) 
 

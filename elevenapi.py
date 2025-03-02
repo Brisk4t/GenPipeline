@@ -5,16 +5,17 @@ from elevenlabs.client import AsyncElevenLabs
 from elevenlabs import play
 import aiohttp
 import base64
+import requests
 
 class elevenlabs_calls:
 
     def __init__(self):
         load_dotenv()
-        self.api_key = os.getenv("ELEVENLABS_API_KEY")
-        self.client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+        self.api_key = os.getenv("ELEVENLABS_API_KEY_uofa")
+        self.client = ElevenLabs(api_key=self.api_key)
         self.async_client = AsyncElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
         self.output_format = "mp3_44100_128"
-        self.model_id="eleven_multilingual_v2"
+        self.model_id="eleven_flash_v2_5" # eleven_multilingual_v2, eleven_flash_v2_5
         self.voice_id="9BWtsMINqrJLrRacOk9x"
 
         self.req_url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}/with-timestamps"
@@ -58,21 +59,6 @@ class elevenlabs_calls:
         return audio
 
 
-    
-    def get_voice_list(self):
-        """
-        Get list of voices and their ids
-        """
-
-        # Get the list of available voices
-        voices = self.client.voice
-
-        # Print the available voices
-        print("Available voices:")
-        for voice in voices:
-            print(f"Name: {voice['name']}, ID: {voice['id']}")
-
-
     async def text_to_speech_timestamps(self, text, output_file_path):
         """
         Async tts with per character timestamps for subtitles
@@ -81,7 +67,8 @@ class elevenlabs_calls:
             Audio object of output format mp3_44100_128
         """
         payload = {
-            "text": text
+            "text": text,
+            "model_id": self.model_id,
         }
 
         output_filename = output_file_path + ".mp3"
@@ -158,7 +145,24 @@ class elevenlabs_calls:
             
             
         return word_timing_map
+    
+    def get_models(self):
+        """Get list of models"""
+        url = "https://api.elevenlabs.io/v1/models"
+        response = requests.get(url, headers=self.req_headers)
 
+        print(response.json())
+
+        
+    def get_voice_list(self):
+        """
+        Get list of voices and their ids
+        """
+
+        url = "https://api.elevenlabs.io/v1/voices"
+        response = requests.get(url, headers=self.req_headers)
+
+        print(response.json())
 
 
 

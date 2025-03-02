@@ -1,5 +1,8 @@
 venv
+temp
+.env
 BaseVideo9_16.mp4
 output_video.mp4
 subtitles.srt
 __pycache__/elevenapi.cpython-311.pyc
+BaseVideo_9_16_2.mp4
