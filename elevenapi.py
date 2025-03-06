@@ -13,7 +13,7 @@ class elevenlabs_calls:
         load_dotenv()
         self.api_key = os.getenv("ELEVENLABS_API_KEY_uofa")
         self.client = ElevenLabs(api_key=self.api_key)
-        self.async_client = AsyncElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+        self.async_client = AsyncElevenLabs(api_key=self.api_key)
         self.output_format = "mp3_44100_128"
         self.model_id="eleven_flash_v2_5" # eleven_multilingual_v2, eleven_flash_v2_5
         self.voice_id="9BWtsMINqrJLrRacOk9x"
@@ -97,7 +97,9 @@ class elevenlabs_calls:
                     
                     # print("Characters:", response_json.get("alignment", {}).get("characters"), len(response_json.get("alignment", {}).get("characters")))
                     # start_times = response_json.get("alignment", {}).get("character_start_times_seconds")
+                    # end_times = response_json.get("alignment", {}).get("character_end_times_seconds")
                     # print("Start times:", start_times, len(start_times))
+                    # print("Start times:", end_times, len(end_times))
                     # print("Character Timings:", word_timing_map)
 
                 else:
@@ -109,13 +111,6 @@ class elevenlabs_calls:
 
 
     def extract_character_timings(self, text, response_json):
-        """
-        Maps characters and words to their start and end timestamps.
-        
-        Returns:
-            Dict: {"Word":(start_time, end_time)}
-        
-        """
 
         alignment = response_json.get("alignment", {})
 
@@ -123,28 +118,34 @@ class elevenlabs_calls:
         start_times = alignment.get("character_start_times_seconds", [])
         end_times = alignment.get("character_end_times_seconds", [])
 
-        # Word timing map
         words = text.split()  # Split text into words
-        word_timing_map = {}
-        index = 0  # Keep track of character index in the alignment
-
-        print("Words", words)
+        word_timing_map = []
+        char_index = 0
 
         for word in words:
-            # Find the first character of the word in the characters list (ignoring spaces)
-            while index < len(characters) and characters[index] == ' ':
-                index += 1  # Skip spaces
+            print("Word:", word)
 
-            if index < len(characters):  # Ensure index is within range
-                word_start = start_times[index]
-                index += len(word)-1  # Move index to the last letter of the word
-                word_end = end_times[index]
-                index += 1 # And now past the word
+            word_start = None
+            word_end = None
 
-                word_timing_map[word] = (word_start, word_end)  # Store time of first character
+            while characters[char_index] == ' ': # Skip all spaces
+                char_index += 1
+
+            if word[0] == characters[char_index]:
+                print(char_index, characters[char_index])
+
+                word_start = start_times[char_index] # Word start time set when first char is in characters list
+                char_index = char_index + (len(word)-1) # Move to the end of the word
+                word_end = end_times[char_index] # Word end time set when last char in in characters list
+
+                word_timing_map.append((word, word_start, word_end))
             
-            
+                char_index += 1 # Move to the next character
+
+        print(word_timing_map)
+        
         return word_timing_map
+
     
     def get_models(self):
         """Get list of models"""

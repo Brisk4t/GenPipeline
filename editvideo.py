@@ -8,7 +8,8 @@ import subprocess
 
 def generate_video_with_subtitles(base_video_path, audio_path, word_timings, output_video_path, str_uuid):
     """
-    Use a base video and audio file, stitch them together and add hard coded subtitles to the final video
+    MoviePy
+    Use a base video and audio file, stitch them together and add hard coded subtitles to the final video.
     """
     # Load the base video and audio
     video = VideoFileClip(base_video_path)
@@ -17,9 +18,9 @@ def generate_video_with_subtitles(base_video_path, audio_path, word_timings, out
     # Set the audio to the video
     video = video.with_audio(audio)
 
-
     # Create SRT subtitles from word timings
-    create_srt_from_dict(word_timings, str_uuid)
+    #create_srt_from_dict(word_timings, str_uuid)
+    create_srt_from_dict_timed(word_timings, str_uuid)
 
     # Load subtitles
     generator = lambda text: TextClip('C:\\Windows\\Fonts\\arial.ttf',text=text, font_size=50, color='white', horizontal_align='center', size=video.size)
@@ -36,11 +37,10 @@ def generate_video_with_subtitles(base_video_path, audio_path, word_timings, out
 
 def add_subtitles_to_video(video_file, output_video_file, audio_and_timings, str_uuid):
     """
-    FFMPEG based video subtitling, significantly faster than moviepy
-    
-    
+    FFMPEG
+    Use a base video and audio file, stitch them together and add hard coded subtitles to the final video.
     """
-    create_srt_from_dict(audio_and_timings[1], str_uuid)
+    create_srt_from_dict_timed(audio_and_timings[1], str_uuid)
     command = [
         'ffmpeg',
         '-y',
@@ -67,7 +67,13 @@ def create_srt_from_dict(word_dict, output_filename):
     output_filename = 'temp/' + output_filename + '_subtitles.srt'
     with open(output_filename, 'w', encoding='UTF-8') as file:
         counter = 1
-        for word, (start, end) in word_dict.items():
+        for word_triple in word_dict:
+            word = word_triple[0]
+            start = word_triple[1]
+            end = word_triple[2]
+
+            print(f"{word}: {start}--->{end}")
+
             # Convert start and end time to the SRT format (HH:MM:SS,MMM)
             start_time = format_time(start)
             end_time = format_time(end)
@@ -77,6 +83,58 @@ def create_srt_from_dict(word_dict, output_filename):
             file.write(f"{start_time} --> {end_time}\n")
             file.write(f"{word}\n\n")
             counter += 1
+
+
+def create_srt_from_dict_timed(word_list, output_filename, words_on_screen=3, spoken_time=0.5):
+    """
+    Generates an SRT file from a list of words and timings, limit how many words are on screen at once and for how long
+    
+    :param word_list: List in the format [(word, start_time, end_time),......}.
+    :param output_filename: Name of the output SRT file.
+    :param words_on_screen: how many words will be shown at once
+    :param spoken_time: min time a word must take to be shown on the screen by itself (for longer words)
+    """
+    output_filename = 'temp/' + output_filename + '_subtitles.srt'
+
+    with open(output_filename, 'w', encoding='UTF-8') as file:
+        counter = 1
+        word_len = 0
+        prev_word = None
+        prev_start = None
+        prev_end = None
+
+        for word_triple in word_list:
+            word = word_triple[0]
+            start = word_triple[1]
+            end = word_triple[2]
+            #print(f"{word}: {start}--->{end}")
+
+            if prev_word and end-prev_start < spoken_time: # If the combined word takes less than this time to speak
+                if word_len < words_on_screen: # Only n words together
+                    prev_word += " " + word  # Combine the previous and current word into one entry
+                    prev_end = end  # Extend the end time to the current word's end
+                    word_len += 1 # Increment the words-on-screen length
+
+            else:
+                # Write the previous word entry if it exists
+                if prev_word:
+                    file.write(f"{counter}\n")
+                    file.write(f"{format_time(prev_start)} --> {format_time(prev_end)}\n")
+                    file.write(f"{prev_word}\n\n")
+                    counter += 1
+                    word_len = 0
+
+                # Store the current word details for the next iteration
+                prev_word = word
+                prev_start = start
+                prev_end = end
+            
+        # Write the last word entry if it hasn't been written yet
+        if prev_word:
+            file.write(f"{counter}\n")
+            file.write(f"{format_time(prev_start)} --> {format_time(prev_end)}\n")
+            file.write(f"{prev_word}\n\n")
+
 
 def format_time(seconds):
     """
@@ -105,11 +163,12 @@ if __name__ == "__main__":
     str_uuid = str(uuid.uuid4())
 
 
-    base_video_path = "BaseVideo_9_16_2.mp4"  # Replace with your video file path
+    base_video_path = "basevideogenerated.mp4"  # Replace with your video file path
     output_video_path = "output_video.mp4"  # Path to save the output video
-    #text = "In a small village, a young girl named Yuki discovered she had the power to control time. Every day, she’d rewind moments to help others, whether it was saving a cat stuck in a tree or preventing a broken vase. But one day, a mysterious boy appeared, claiming to have the ability to erase time altogether. As they clashed, Yuki realized the boy was her future self, lost in a cycle of regret. Together, they learned that true strength wasn’t in controlling time, but in accepting the moments as they are, cherishing both the good and the bad."
-    #text = "Hello this is a subtitle test for elevenlabs"
-    text = "यामतो, एक कुशल समुराई, अपने गाँव की रक्षा के लिए काले जादूगर रोशिन से लड़ने निकला। उसकी तलवार चंद्रमा की रोशनी में चमकती थी। जादूगर ने अंधकार का जाल फैलाया, लेकिन यामतो की आत्मा अडिग रही। दोनों की तलवारें टकराईं, आग की चिंगारियाँ बिखरीं। एक अंतिम वार में यामतो ने रोशिन का अभिशाप तोड़ दिया। गाँव रोशनी से भर गया, लेकिन यामतो घुटनों पर गिर पड़ा। उसकी आँखों में संतोष था—वह जीत गया था। आखिरी सांस लेते हुए, वह मुस्कुराया। उसका नाम अमर हो गया, कहानियों में, हवाओं में, अनंत तक।"
+    text = "In a small village, a young girl named Yuki discovered she had the power to control time."
+    # Every day, she’d rewind moments to help others, whether it was saving a cat stuck in a tree or preventing a broken vase. But one day, a mysterious boy appeared, claiming to have the ability to erase time altogether. As they clashed, Yuki realized the boy was her future self, lost in a cycle of regret. Together, they learned that true strength wasn’t in controlling time, but in accepting the moments as they are, cherishing both the good and the bad."
+    #text = "इस साल बिहार के भविष्य के लिए वोट करें, भारतीय युवा कांग्रेस को वोट दें"
+    #text = "यामतो, एक कुशल समुराई, अपने गाँव की रक्षा के लिए काले जादूगर रोशिन से लड़ने निकला। उसकी तलवार चंद्रमा की रोशनी में चमकती थी। जादूगर ने अंधकार का जाल फैलाया, लेकिन यामतो की आत्मा अडिग रही। दोनों की तलवारें टकराईं, आग की चिंगारियाँ बिखरीं। एक अंतिम वार में यामतो ने रोशिन का अभिशाप तोड़ दिया। गाँव रोशनी से भर गया, लेकिन यामतो घुटनों पर गिर पड़ा। उसकी आँखों में संतोष था—वह जीत गया था। आखिरी सांस लेते हुए, वह मुस्कुराया। उसका नाम अमर हो गया, कहानियों में, हवाओं में, अनंत तक।"
 
     audio_and_timings = asyncio.run(creator.text_to_speech_timestamps(text, temp_location + str_uuid)) 
 
