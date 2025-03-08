@@ -1,5 +1,6 @@
 venv
 temp
+app/node_modules
 .env
 BaseVideo9_16.mp4
 output_video.mp4

@@ -11,7 +11,7 @@ class elevenlabs_calls:
 
     def __init__(self):
         load_dotenv()
-        self.api_key = os.getenv("ELEVENLABS_API_KEY_uofa")
+        self.api_key = os.getenv("ELEVENLABS_API_KEY_3")
         self.client = ElevenLabs(api_key=self.api_key)
         self.async_client = AsyncElevenLabs(api_key=self.api_key)
         self.output_format = "mp3_44100_128"
@@ -59,7 +59,7 @@ class elevenlabs_calls:
         return audio
 
 
-    async def text_to_speech_timestamps(self, text, output_file_path):
+    async def text_to_speech_timestamps(self, text):
         """
         Async tts with per character timestamps for subtitles
 
@@ -70,8 +70,6 @@ class elevenlabs_calls:
             "text": text,
             "model_id": self.model_id,
         }
-
-        output_filename = output_file_path + ".mp3"
 
         async with aiohttp.ClientSession() as session:
             async with session.post(self.req_url, json=payload, headers=self.req_headers) as response:
@@ -87,9 +85,12 @@ class elevenlabs_calls:
 
                     # Decode and save the audio file
                     audio_bytes = base64.b64decode(audio_base64)
-                    with open(output_filename, "wb") as f: # change output file name to be unique to build db
-                        f.write(audio_bytes)
-                    print(f"Audio saved at {output_file_path}")
+
+                    # Enable to store audio instead of returning byte data
+
+                    # with open(output_filename, "wb") as f: # change output file name to be unique to build db
+                    #     f.write(audio_bytes)
+                    # print(f"Audio saved at {output_file_path}")
 
                     # Extract character timings
                     word_timing_map = self.extract_character_timings(text, response_json)
@@ -107,7 +108,7 @@ class elevenlabs_calls:
                     print(f"Error: {response.status}, {error_message}")
 
 
-        return (output_filename, word_timing_map)
+        return (audio_bytes, word_timing_map)
 
 
     def extract_character_timings(self, text, response_json):
