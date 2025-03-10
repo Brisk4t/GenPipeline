@@ -6,8 +6,17 @@ import shutil
 from editvideo import VideoGenerator
 import uvicorn
 import logging
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
+react_build_path = os.path.normpath(os.path.abspath("../frontend/build"))
+
+try:
+    app.mount("/static", StaticFiles(directory=os.path.join(react_build_path, "static")), name="static")
+
+except:
+    pass
 
 # Ensure that the temp folder exists
 TEMP_FOLDER = "./temp"
@@ -24,6 +33,20 @@ def cleanup_files(*file_paths: str):
                 os.remove(path)
         except Exception as e:
             print(f"Error deleting {path}: {e}")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+def serve_react():
+    """Serve React index.html for the root path."""
+    return FileResponse(os.path.join(react_build_path, "index.html"))
 
 @app.post("/generate_video")
 async def generate_video(background_tasks: BackgroundTasks, text: str = Form(...), base_video: UploadFile = File(...)):

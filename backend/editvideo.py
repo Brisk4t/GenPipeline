@@ -45,12 +45,14 @@ class VideoGenerator():
             #     output_video_file  # Output video file with subtitles
             # ]
             # subprocess.run(command, check=True)
+            audio_duration = ffmpeg.probe(audio_file, v='error', select_streams='a:0', show_entries='format=duration')
+            audio_duration = float(audio_duration['format']['duration'])
 
-            input_video = ffmpeg.input(video_file).video.filter("subtitles", f"{srt_file}")
+            input_video = ffmpeg.input(video_file, stream_loop=-1).video.filter("subtitles", f"{srt_file}")
             input_audio = ffmpeg.input(audio_file)
+            print(audio_duration)
 
-
-            ffmpeg.concat(input_video, input_audio, v=1, a=1).output(output_video_file, vcodec='libx264', audio_bitrate='192k').run()
+            ffmpeg.concat(input_video, input_audio, v=1, a=1).output(output_video_file, vcodec='libx264', audio_bitrate='192k', t=audio_duration).run()
 
         finally:
             os.remove(audio_file)
