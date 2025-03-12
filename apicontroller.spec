@@ -9,12 +9,12 @@ added_files = [
          ( 'app/frontend/build/*.txt', 'frontend/build/build' ),
          ( 'app/frontend/build/*.ico', 'frontend/build/build' ),
          ( 'app/frontend/build/*.png', 'frontend/build/build' ),
-         ( 'app/backend/*.yaml', '.' ),
+         ( 'app/*.yaml', '.' ),
 
          ]
 
 a = Analysis(
-    ['app/backend/apicontroller.py'],
+    ['app/apicontroller.py'],
     pathex=[],
     binaries=[],
     datas=added_files,
