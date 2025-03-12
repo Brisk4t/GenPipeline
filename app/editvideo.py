@@ -9,8 +9,8 @@ import time
 
 class VideoGenerator():
 
-    def __init__(self):
-        self.creator = elevenlabs_calls()
+    def __init__(self, api_key):
+        self.creator = elevenlabs_calls(api_key)
 
     def add_subtitles_to_video(self, video_file, output_video_file, audio_and_timings):
         """

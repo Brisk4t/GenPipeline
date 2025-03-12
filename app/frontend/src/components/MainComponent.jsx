@@ -67,7 +67,11 @@ function MainComponent() {
   const [uploadedVideoPreview, setUploadedVideoPreview] = useState(null);
   const [processedVideoPreview, setProcessedVideoPreview] = useState(null);
   const [placeholderText, setPlaceholderText] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imageBase64, setImageBase64] = useState('');
+  
   const subtitlesFileRef = useRef(null);
+  const imageFileRef = useRef(null);
 
   // Handle subtitles text change
   const handleSubtitlesTextChange = (e) => {
@@ -77,6 +81,11 @@ function MainComponent() {
   // Handle subtitles file change (upload)
   const handleSubtitlesFileChange = () => {
     subtitlesFileRef.current.click(); // Open the file dialog when clicking the button
+  };
+
+  // Handle subtitles file change (upload)
+  const handleImageChange = () => {
+    document.getElementById('image-upload').click(); // Trigger file input click via button
   };
 
   const handleFileSelection = (e) => {
@@ -105,9 +114,23 @@ function MainComponent() {
     }
   };
 
-  // Handle form submission
+  // Handle image selection (upload)
+  const handleImageSelection = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageBase64(reader.result); // Store base64 image data
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle form submission for video and subtitles
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!baseVideoFile) {
       alert("Please upload a base video file.");
       return;
@@ -135,15 +158,38 @@ function MainComponent() {
     }
   };
 
-  // Handle placeholder endpoint submission
-  const handlePlaceholderSubmit = async (e) => {
+  // Handle form submission for /runway_generate
+  const handleRunwayGenerateSubmit = async (e) => {
     e.preventDefault();
+
+    if (!imageFile) {
+      alert('Please upload an image.');
+      return;
+    }
+
+    if (!placeholderText) {
+      alert('Please enter placeholder text.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('prompt', placeholderText);
+    formData.append('base_image', imageFile); // You might need to convert imageBase64 to a file if needed
+
     try {
-      await axios.post('http://localhost:8000/empty', { placeholder: placeholderText });
-      alert("Placeholder endpoint called successfully.");
+      const response = await axios.post('http://localhost:8000/runway_generate', formData, {
+        responseType: 'blob',
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const videoUrl = response.data.output[0]; // Use the output field for the video URL
+      handleVideoSelection(videoUrl)
+
+      alert('Success! Response from /runway_generate endpoint.');
+      console.log('Response:', response.data);
     } catch (error) {
-      console.error('Placeholder call error:', error);
-      alert("Error calling the placeholder endpoint.");
+      console.error('Error calling /runway_generate:', error);
+      alert('Error calling /runway_generate endpoint.');
     }
   };
 
@@ -154,6 +200,7 @@ function MainComponent() {
           Upload Video and Subtitles
         </Typography>
         <form onSubmit={handleSubmit}>
+          {/* Subtitle text and file input */}
           <Box mb={3}>
             <Typography variant="body1">Subtitles Text:</Typography>
             <TextField
@@ -185,6 +232,7 @@ function MainComponent() {
             />
           </Box>
 
+          {/* Base Video File */}
           <Box mb={3}>
             <Typography variant="body1">Base Video File:</Typography>
             <Button
@@ -241,20 +289,55 @@ function MainComponent() {
         <hr style={{ margin: '2rem 0' }} />
 
         <Typography variant="h5" gutterBottom>
-          Placeholder Endpoint
+          Video Generation
         </Typography>
-        <form onSubmit={handlePlaceholderSubmit}>
+        <form onSubmit={handleRunwayGenerateSubmit}>
+          {/* Image upload input */}
           <Box mb={3}>
+            <Typography variant="body1">Upload Image for Runway AI video generation:</Typography>
+            <Button
+              variant="outlined"
+              onClick={handleImageChange}
+              sx={{ marginTop: 1 }}
+            >
+              Upload Image
+            </Button>
+            <Input
+              type="file"
+              id="image-upload"
+              accept="image/*"
+              onChange={handleImageSelection}
+              style={{ display: 'none' }}
+            />
+          </Box>
+
+          {imageBase64 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center', // Centers horizontally
+                alignItems: 'center', // Centers vertically
+                flexDirection: 'column', // Ensures that the heading and image are stacked
+                textAlign: 'center' // Centers the text of the heading
+              }}
+            >
+              <h3>Uploaded Image Preview:</h3>
+              <img src={imageBase64} alt="Preview" width="200" height="200" />
+            </div>
+          )}
+
+          <Box mb={3}>
+            <Typography variant="body1">Enter Prompt Text:</Typography>
             <TextField
-              label="Placeholder Text"
               value={placeholderText}
               onChange={(e) => setPlaceholderText(e.target.value)}
               fullWidth
               sx={{ marginTop: 1, backgroundColor: '#333', borderRadius: '4px' }}
             />
           </Box>
-          <Button type="submit" variant="contained" color="error" fullWidth sx={{ marginTop: 2 }}>
-            Call Placeholder Endpoint
+
+          <Button type="submit" variant="contained" color="secondary" fullWidth sx={{ marginTop: 2 }}>
+            Generate Placeholder Video
           </Button>
         </form>
       </Container>

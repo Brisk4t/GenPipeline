@@ -9,9 +9,10 @@ import requests
 
 class elevenlabs_calls:
 
-    def __init__(self):
+    def __init__(self, api_key):
         load_dotenv()
-        self.api_key = os.getenv("ELEVENLABS_API_KEY_3")
+        #self.api_key = os.getenv("ELEVENLABS_API_KEY_3")
+        self.api_key = api_key
         self.client = ElevenLabs(api_key=self.api_key)
         self.async_client = AsyncElevenLabs(api_key=self.api_key)
         self.output_format = "mp3_44100_128"
