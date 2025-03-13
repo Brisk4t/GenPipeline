@@ -27,3 +27,9 @@ jobs:
       - name: Run PyInstaller
         run: |
           pyinstaller apicontroller.spec
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributable_osx
+          path: dist
