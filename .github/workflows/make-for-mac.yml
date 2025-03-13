@@ -27,3 +27,13 @@ jobs:
       - name: Run PyInstaller
         run: |
           pyinstaller apicontroller.spec
+
+      - name: Zip dist folder
+        run: |
+          zip -r dist.zip dist
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-artifact
+          path: dist.zip
