@@ -1,4 +1,4 @@
-name: Generate PyInstaller spec of OSX
+name: Generate PyInstaller spec for OSX
 
 on:
   workflow_dispatch:
