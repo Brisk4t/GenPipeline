@@ -9,7 +9,7 @@ added_files = [
          ( 'app/frontend/build/*.txt', 'frontend/build/build' ),
          ( 'app/frontend/build/*.ico', 'frontend/build/build' ),
          ( 'app/frontend/build/*.png', 'frontend/build/build' ),
-         ( 'app/*.yaml', '.' ),
+         # ( 'app/*.yaml', '.' ),
 
          ]
 
