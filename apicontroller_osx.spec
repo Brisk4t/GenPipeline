@@ -28,7 +28,7 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
-exe = BUNDLE(
+exe = EXE(
     pyz,
     a.scripts,
     [],
