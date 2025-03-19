@@ -6,6 +6,8 @@ app/frontend/node_modules
 app/config.yaml
 build
 dist
+images
+transitions
 .env
 BaseVideo9_16.mp4
 output_video.mp4

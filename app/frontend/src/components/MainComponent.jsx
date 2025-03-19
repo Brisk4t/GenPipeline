@@ -145,7 +145,7 @@ function MainComponent() {
     formData.append('base_video', baseVideoFile);
 
     try {
-      const response = await axios.post('http://localhost:8000/generate_video', formData, {
+      const response = await axios.post('/generate_video', formData, {
         responseType: 'blob',
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -177,7 +177,7 @@ function MainComponent() {
     formData.append('base_image', imageFile); // You might need to convert imageBase64 to a file if needed
 
     try {
-      const response = await axios.post('http://localhost:8000/runway_generate', formData, {
+      const response = await axios.post('/runway_generate', formData, {
         responseType: 'blob',
         headers: { 'Content-Type': 'multipart/form-data' }
       });
