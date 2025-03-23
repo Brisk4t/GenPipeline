@@ -156,10 +156,10 @@ class VideoGenerator():
         return f"{hours:02}:{minutes:02}:{int(seconds):02},{milliseconds:03}"
 
 
-    async def generate_subtitles_video(self, text, base_video, output_video):
+    async def generate_subtitles_video(self, text, base_video, output_video, model_id=None):
 
         #audio_and_timings = asyncio.run(self.creator.text_to_speech_timestamps(text)) 
-        audio_and_timings = await self.creator.text_to_speech_timestamps(text)
+        audio_and_timings = await self.creator.text_to_speech_timestamps(text, model_id)
         output_video_path = self.add_subtitles_to_video(base_video, output_video, audio_and_timings)
 
         return output_video_path

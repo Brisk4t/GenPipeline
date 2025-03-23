@@ -4,11 +4,11 @@ added_files = [
          ( 'app/frontend/build/static/css', 'frontend/build/static/css' ),
          ( 'app/frontend/build/static/js', 'frontend/build/static/js' ),
          ( 'app/frontend/build/static/media', 'frontend/build/static/media' ),
-         ( 'app/frontend/build/*.json', 'frontend/build/build' ),
-         ( 'app/frontend/build/*.html', 'frontend/build/build' ),
-         ( 'app/frontend/build/*.txt', 'frontend/build/build' ),
-         ( 'app/frontend/build/*.ico', 'frontend/build/build' ),
-         ( 'app/frontend/build/*.png', 'frontend/build/build' ),
+         ( 'app/frontend/build/*.json', 'frontend/build' ),
+         ( 'app/frontend/build/*.html', 'frontend/build' ),
+         ( 'app/frontend/build/*.txt', 'frontend/build' ),
+         ( 'app/frontend/build/*.ico', 'frontend/build' ),
+         ( 'app/frontend/build/*.png', 'frontend/build' ),
          # ( 'app/*.yaml', '.' ),
 
          ]

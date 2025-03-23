@@ -10,14 +10,12 @@ import requests
 class elevenlabs_calls:
 
     def __init__(self, api_key):
-        load_dotenv()
-        #self.api_key = os.getenv("ELEVENLABS_API_KEY_3")
         self.api_key = api_key
         self.client = ElevenLabs(api_key=self.api_key)
         self.async_client = AsyncElevenLabs(api_key=self.api_key)
         self.output_format = "mp3_44100_128"
         self.model_id="eleven_flash_v2_5" # eleven_multilingual_v2, eleven_flash_v2_5
-        self.voice_id="9BWtsMINqrJLrRacOk9x"
+        self.voice_id="9BWtsMINqrJLrRacOk9x" # default
 
         self.req_url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}/with-timestamps"
     
@@ -60,16 +58,28 @@ class elevenlabs_calls:
         return audio
 
 
-    async def text_to_speech_timestamps(self, text):
+    async def text_to_speech_timestamps(self, text, voice_id=None):
         """
         Async tts with per character timestamps for subtitles
 
         Returns:
             Audio object of output format mp3_44100_128
         """
+        if voice_id:
+            self.voice_id = voice_id
+        
+        print(f"Generating with voice_id: {self.voice_id}")
+        print(f"Endpoint: {self.req_url}")
+        self.req_url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}/with-timestamps"
+    
         payload = {
             "text": text,
             "model_id": self.model_id,
+            "voice_settings": {
+                "style" : 0.5,
+                "speed" : 0.9,
+                "use_speaker_boost": 1           
+            }
         }
 
         async with aiohttp.ClientSession() as session:
@@ -170,6 +180,8 @@ class elevenlabs_calls:
 
 
 if __name__ == "__main__":
-    elevenlabs_object = elevenlabs_calls()
+    load_dotenv()
+    api_key = os.getenv("ELEVENLABS_API_KEY_3")
+    elevenlabs_object = elevenlabs_calls(api_key)
 
     elevenlabs_object.get_voice_list()

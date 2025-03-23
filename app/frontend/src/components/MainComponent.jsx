@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Button, TextField, Box, Typography, Container, Input, createTheme, ThemeProvider } from '@mui/material';
 import axios from 'axios';
+import FileTextCall from './FileTextCall/FileTextCall';
+import DropDownComponent from './DropDownComponent';
 
 const darkTheme = createTheme({
   palette: {
@@ -69,9 +71,17 @@ function MainComponent() {
   const [placeholderText, setPlaceholderText] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imageBase64, setImageBase64] = useState('');
+  const [selectedVoice, setSelectedVoice] = useState('');
   
   const subtitlesFileRef = useRef(null);
   const imageFileRef = useRef(null);
+
+
+  const handleSelectionChange = (newSelection) => {
+    setSelectedVoice(newSelection);
+    console.log("Newly Selected Voice", selectedVoice)
+
+  };
 
   // Handle subtitles text change
   const handleSubtitlesTextChange = (e) => {
@@ -199,38 +209,16 @@ function MainComponent() {
         <Typography variant="h4" gutterBottom>
           Upload Video and Subtitles
         </Typography>
-        <form onSubmit={handleSubmit}>
-          {/* Subtitle text and file input */}
-          <Box mb={3}>
-            <Typography variant="body1">Subtitles Text:</Typography>
-            <TextField
-              placeholder="Enter subtitles text here..."
-              value={subtitlesText}
-              onChange={handleSubtitlesTextChange}
-              multiline
-              rows={3}
-              fullWidth
-              sx={{ marginTop: 1, backgroundColor: '#333', borderRadius: '4px' }}
-            />
-          </Box>
+        
+        <div>
+            <h2>Select Voice: {selectedVoice}</h2>
+            <DropDownComponent onSelectionChange={handleSelectionChange} />
+        </div>
 
-          <Box mb={3}>
-            <Typography variant="body1">OR upload a TXT file:</Typography>
-            <Button
-              variant="outlined"
-              onClick={handleSubtitlesFileChange}
-              sx={{ marginTop: 1 }}
-            >
-              Upload Subtitles TXT
-            </Button>
-            <Input
-              type="file"
-              accept=".txt"
-              ref={subtitlesFileRef}
-              onChange={handleFileSelection}
-              style={{ display: 'none' }}
-            />
-          </Box>
+        <Box mb={3}>
+          <FileTextCall apiEndpoint={"http://localhost:8000/generate_video"} supportedFileTypes={["video/mp4"]} model_id={selectedVoice} />
+        </Box>
+
 
           {/* Base Video File */}
           <Box mb={3}>
@@ -250,41 +238,6 @@ function MainComponent() {
               style={{ display: 'none' }}
             />
           </Box>
-
-          {uploadedVideoPreview && (
-            <Box mb={3} display="flex" flexDirection="column" justifyContent="center" alignItems="center">
-              <Typography variant="h6">Uploaded Video Preview:</Typography>
-              <video width="400" controls src={uploadedVideoPreview} />
-            </Box>
-          )}
-
-          <Button type="submit" variant="contained" color="primary" fullWidth sx={{ marginTop: 2 }}>
-            Submit for Processing
-          </Button>
-        </form>
-
-        {processedVideoPreview && (
-          <Box mt={4} display="flex" justifyContent="center" flexDirection="column" alignItems="center">
-            <Typography variant="h6">Processed Video Preview</Typography>
-            <video width="400" controls src={processedVideoPreview}></video>
-            <Box mt={2}>
-              <a
-                href={processedVideoPreview}
-                download="processed_video.mp4"
-                style={{
-                  display: 'inline-block',
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#007BFF',
-                  color: '#fff',
-                  textDecoration: 'none',
-                  borderRadius: '4px',
-                }}
-              >
-                Download Processed Video
-              </a>
-            </Box>
-          </Box>
-        )}
 
         <hr style={{ margin: '2rem 0' }} />
 

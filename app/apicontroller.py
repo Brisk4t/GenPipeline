@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from editvideo import VideoGenerator
 from runwayml import RunwayML
+import mimetypes
 import uvicorn
 
 class VideoApp:
@@ -60,18 +61,26 @@ class VideoApp:
 
         @self.app.post("/generate_video")
         async def generate_video(
-            background_tasks: BackgroundTasks, text: str = Form(...), base_video: UploadFile = File(...)
-        ):
+            background_tasks: BackgroundTasks, text: str = Form(...), file: UploadFile = File(...), model_id: str = Form(...)):
             """Generate a video with subtitles."""
             try:
-                base_video_path = self.save_uploaded_file(base_video)
+                base_video_path = self.save_uploaded_file(file)
                 output_video_filename = self.generate_output_filename(text)
                 output_video_path = os.path.join(self.temp_folder, output_video_filename)
 
-                # Generate the video
-                generated_video_path = await self.video_generator.generate_subtitles_video(
-                    text, base_video_path, output_video_path
-                )
+                mime_type, _ = mimetypes.guess_type(file.filename)
+
+                if mime_type:
+                    if mime_type.startswith("image/"):  
+                        # If the file is an image
+                        return {"message": "Image file detected", "endpoint": "/upload_image"}
+                    
+                    elif mime_type.startswith("video/"):  
+                        generated_video_path = await self.video_generator.generate_subtitles_video(
+                            text, base_video_path, output_video_path, model_id
+                        )
+                
+               
 
                 # Schedule cleanup of temporary files
                 background_tasks.add_task(self.cleanup_files, base_video_path, generated_video_path)
