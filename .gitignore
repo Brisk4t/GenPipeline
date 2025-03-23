@@ -5,6 +5,8 @@ app/temp
 app/frontend/node_modules
 app/config.yaml
 build
+images
+transitions
 dist
 images
 transitions
