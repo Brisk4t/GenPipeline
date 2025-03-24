@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { Button, TextField, Box, Typography, Container, Input, createTheme, ThemeProvider } from '@mui/material';
 import axios from 'axios';
-import FileTextCall from './FileTextCall/FileTextCall';
+import FileTextCall from './FileTextCall';
 import DropDownComponent from './DropDownComponent';
+import PostComponent from './PostComponent'
 
 const darkTheme = createTheme({
   palette: {
@@ -242,57 +243,9 @@ function MainComponent() {
         <hr style={{ margin: '2rem 0' }} />
 
         <Typography variant="h5" gutterBottom>
-          Video Generation
+          Video Post
         </Typography>
-        <form onSubmit={handleRunwayGenerateSubmit}>
-          {/* Image upload input */}
-          <Box mb={3}>
-            <Typography variant="body1">Upload Image for Runway AI video generation:</Typography>
-            <Button
-              variant="outlined"
-              onClick={handleImageChange}
-              sx={{ marginTop: 1 }}
-            >
-              Upload Image
-            </Button>
-            <Input
-              type="file"
-              id="image-upload"
-              accept="image/*"
-              onChange={handleImageSelection}
-              style={{ display: 'none' }}
-            />
-          </Box>
-
-          {imageBase64 && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center', // Centers horizontally
-                alignItems: 'center', // Centers vertically
-                flexDirection: 'column', // Ensures that the heading and image are stacked
-                textAlign: 'center' // Centers the text of the heading
-              }}
-            >
-              <h3>Uploaded Image Preview:</h3>
-              <img src={imageBase64} alt="Preview" width="200" height="200" />
-            </div>
-          )}
-
-          <Box mb={3}>
-            <Typography variant="body1">Enter Prompt Text:</Typography>
-            <TextField
-              value={placeholderText}
-              onChange={(e) => setPlaceholderText(e.target.value)}
-              fullWidth
-              sx={{ marginTop: 1, backgroundColor: '#333', borderRadius: '4px' }}
-            />
-          </Box>
-
-          <Button type="submit" variant="contained" color="secondary" fullWidth sx={{ marginTop: 2 }}>
-            Generate Placeholder Video
-          </Button>
-        </form>
+        <PostComponent apiEndpoint={"http://localhost:8000/post_to_instagram"} supportedFileTypes={["video/mp4"]} video={false}/>
       </Container>
     </ThemeProvider>
   );

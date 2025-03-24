@@ -13,6 +13,7 @@ from editvideo import VideoGenerator
 from runwayml import RunwayML
 import mimetypes
 import uvicorn
+from instagramPost import Instagram
 
 class VideoApp:
     def __init__(self):
@@ -22,6 +23,7 @@ class VideoApp:
         self.video_generator = VideoGenerator(self.config["elevenlabs_api_key"])
         self.runway = RunwayML(api_key=self.config["runway_api_key"])
         self.temp_folder = "./temp"
+        self.instagram = Instagram(self.config["instagram_accounts"])
 
         # Ensure temp directory exists
         os.makedirs(self.temp_folder, exist_ok=True)
@@ -92,6 +94,18 @@ class VideoApp:
             except Exception as e:
                 logging.error(f"Error during video generation: {e}", exc_info=True)
                 raise HTTPException(status_code=500, detail="Internal Server Error")
+
+        @self.app.post("/post_to_instagram")
+        async def post_to_instagram(background_tasks: BackgroundTasks, caption: str = Form(...), file: UploadFile = File(...), tags: str = Form(...)):
+            """Post a video to all configured instagram accounts"""
+            try:
+                video = self.save_uploaded_file(file)
+                await self.instagram.post_to_instagram(video, caption, tags)
+
+            except Exception as e:
+                logging.error(f"Error during video post to instagram: {e}", exc_info=True)
+
+
 
         @self.app.post("/runway_generate")
         async def runway_generate(

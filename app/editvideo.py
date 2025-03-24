@@ -80,23 +80,49 @@ class VideoGenerator():
 
         image_video_clip_paths = []
         
+        # Crop and center all images to 1080x1920 (9:16)
         for i, img in enumerate(images):
             crop_filter = self.get_crop_filter(img, 1080, 1920)
             output = f"app/temp/img_clip_{str(uuid.uuid4())}.mp4"
             istream = ffmpeg.input(img, loop=1, t=image_duration)
-            crop_filter(istream).filter("fps", fps=24).output(output, vcodec="libx264", pix_fmt="yuv420p", t=image_duration, r=24).run()
-            image_video_clip_paths.append(output)
-            #image_video_clips.append(crop_filter(istream))
 
-        concat_files = []
-        for i in range(len(images) - 1):
-            ffmpeg_transitions = [ffmpeg.input(clip) for clip in random_transitions]
-            ivideostream = ffmpeg.input(image_video_clip_paths[i])
-            concat_files.append(ivideostream)
-            concat_files.append(ffmpeg_transitions[i % len(ffmpeg_transitions)])
-        concat_files.append(ffmpeg.input(image_video_clip_paths[-1]))  # Append the last image
-        
-        ffmpeg.concat(*concat_files, v=1, a=0).output(final_video_path, vcodec='libx264', audio_bitrate='192k', r=24, t=audio_duration).run()
+            crop_filter(istream).filter("fps", fps=30).output(output, vcodec="libx264", pix_fmt="yuv420p", t=image_duration, r=30).run()
+            image_video_clip_paths.append(output)
+
+        concat_files = [] # List of video clips to concat
+        ffmpeg_transitions = [ffmpeg.input(clip) for clip in random_transitions] # The list of transition video clips randomly chosen from library
+
+        total_time = 0
+        prev_clip = None
+        # Alternate between adding a video and a transition the the final concat
+        for i in range(len(image_video_clip_paths) - 1):
+            ivideostream = ffmpeg.input(image_video_clip_paths[i]) # Video stream object created from each image_video_clip
+            transitionStream = ffmpeg_transitions[i % len(ffmpeg_transitions)]
+
+            if i == 0:
+                prev_clip = ivideostream
+            # ivideostream = ffmpeg.filter([ivideostream], 'settb', 'AVTB')
+            # transitionStream = ffmpeg.filter([transitionStream], 'settb', 'AVTB')
+
+            total_time = total_time + (image_duration*i)+transition_durations[i]
+
+            #video_with_fade = ffmpeg.filter([ivideostream, transitionStream], 'xfade', transition='dissolve', duration=0.3, offset=total_time)
+            video_with_fade = ffmpeg.filter([prev_clip, transitionStream], 'xfade', transition='dissolve', duration=0.3, offset=total_time)
+            prev_clip = video_with_fade
+
+
+
+            #concat_files.append(video_with_fade)
+            
+            # Directly stitch the files together
+            # concat_files.append(ivideostream)
+            # concat_files.append(transitionStream)
+            
+        #concat_files.append(ffmpeg.input(image_video_clip_paths[-1]))  # Append the last image
+        concat_files.append(prev_clip)
+        ffmpeg.concat(*concat_files, v=1, a=0).output(final_video_path, vcodec='libx264', audio_bitrate='192k', r=30, t=audio_duration, pix_fmt='yuv420p').run()
+        print(concat_files)
+        print(image_video_clip_paths)
 
         return final_video_path
 
@@ -260,7 +286,7 @@ class VideoGenerator():
 
         return output_video_path
 
-    async def generate_subtitles_image(self, text, images, output_video):
+    async def generate_subtitles_image(self, text, images, output_video, model_id=None):
         """
         Generate a video using base images and texts, adding transitions in between
         """
@@ -272,7 +298,7 @@ class VideoGenerator():
 
 if __name__ == "__main__":
 
-    api_key = os.getenv("elevenlabs_api_key")
+    api_key = os.getenv("elevenlabs_api_key_iyc")
     current_working_dir = os.getcwd()
     temp_location = "temp/"
     temp_path = os.path.join(current_working_dir, temp_location)
