@@ -11,6 +11,8 @@ dist
 images
 transitions
 .env
+log
+app/config/*
 BaseVideo9_16.mp4
 output_video.mp4
 subtitles.srt

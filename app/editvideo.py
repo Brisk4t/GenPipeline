@@ -1,6 +1,7 @@
 import asyncio
 import random
 from elevenapi import elevenlabs_calls
+from moviepy import *
 import uuid
 import os
 import subprocess
@@ -54,33 +55,64 @@ class VideoGenerator():
         return output_video_file
     
 
-    def create_video_from_images(self, image_files_path, transition_clips, audio_duration):
-        output_width = 1080  # Example width
-        output_height = int(output_width * 16 / 9)
-
-        final_video_path = f"temp/stitched_{str(uuid.uuid4())}.mp4"
-        #crop_filter = f"crop=in_w:in_w*(16/9):(in_w-out_w)/2:(in_h-out_h)/2,scale={output_width}:{output_height}"
-        #crop_filter = f"crop={output_width}:{output_height}:(in_w-{output_width})/2:(in_h-{output_height})/2,scale={output_width}:{output_height}"
+    def crossfade_with_moviepy(self, video_clips, transition_clips, transition_durations):
+        """
+        Crossfades a list of video clips with transition clips in between.
         
+        :param video_clips: List of file paths for main video clips.
+        :param transition_clips: List of file paths for transition clips.
+        :param crossfade_duration: Duration of the crossfade in seconds.
+        :return: A final concatenated video clip.
+        """
+        composite_clips = []
+        total_time = 0
+        for i in range(len(video_clips)):
+            
+            current_clip = VideoFileClip(video_clips[i]) # The first clip in the clip,transition,clip group
+            current_clip = current_clip.with_layer_index(0)
+
+            # If clip is not the first clip
+            if i > 0:
+                current_clip = current_clip.with_start(total_time) # After the first clip, every clip starts where the previous one ends
+
+            total_time += current_clip.duration
+            composite_clips.append(current_clip)
+
+
+            # If there are transitions left
+            if i < len(transition_clips):
+                transition_clip = VideoFileClip(transition_clips[i]).with_opacity(0.5) # The transition at the end of the current clip
+                transition_clip = transition_clip.with_layer_index(1)
+
+                # Start the first half of the transition as the current clip ends
+                transition_start = current_clip.end - (transition_clip.duration)/2
+                transition_clip = transition_clip.with_start(transition_start)
+                transition_clip = transition_clip.with_position("center")
+
+
+                composite_clips.append(transition_clip)
+
+
+        composite_video = CompositeVideoClip(clips=composite_clips)
+        
+        #final_video = concatenate_videoclips(clips, method="compose")
+        return composite_video
+
+    def create_video_from_images(self, image_files_path, transition_clips, audio_duration):
+        final_video_path = f"temp/stitched_{str(uuid.uuid4())}.mp4"
         
         images = [os.path.abspath(os.path.join(image_files_path, image)) for image in os.listdir(image_files_path)]
         num_images = len(images)
         random_transitions = random.choices(transition_clips, k=num_images-1)
         transition_durations = [self.get_video_duration(clip) for clip in random_transitions]
 
-        
-        total_transition_time = sum(transition_durations)
-        remaining_time = audio_duration - total_transition_time
 
-        print("Audio Duration:", audio_duration)
-        print("Num images:", num_images)
-        print("TTime:", total_transition_time)
-        print("RTime:", remaining_time)
-        image_duration = remaining_time / num_images
+        image_duration = audio_duration / num_images
 
         image_video_clip_paths = []
         
         # Crop and center all images to 1080x1920 (9:16)
+        # then turn them into mp4 clips of calculated duration
         for i, img in enumerate(images):
             crop_filter = self.get_crop_filter(img, 1080, 1920)
             output = f"app/temp/img_clip_{str(uuid.uuid4())}.mp4"
@@ -89,40 +121,9 @@ class VideoGenerator():
             crop_filter(istream).filter("fps", fps=30).output(output, vcodec="libx264", pix_fmt="yuv420p", t=image_duration, r=30).run()
             image_video_clip_paths.append(output)
 
-        concat_files = [] # List of video clips to concat
-        ffmpeg_transitions = [ffmpeg.input(clip) for clip in random_transitions] # The list of transition video clips randomly chosen from library
 
-        total_time = 0
-        prev_clip = None
-        # Alternate between adding a video and a transition the the final concat
-        for i in range(len(image_video_clip_paths) - 1):
-            ivideostream = ffmpeg.input(image_video_clip_paths[i]) # Video stream object created from each image_video_clip
-            transitionStream = ffmpeg_transitions[i % len(ffmpeg_transitions)]
-
-            if i == 0:
-                prev_clip = ivideostream
-            # ivideostream = ffmpeg.filter([ivideostream], 'settb', 'AVTB')
-            # transitionStream = ffmpeg.filter([transitionStream], 'settb', 'AVTB')
-
-            total_time = total_time + (image_duration*i)+transition_durations[i]
-
-            #video_with_fade = ffmpeg.filter([ivideostream, transitionStream], 'xfade', transition='dissolve', duration=0.3, offset=total_time)
-            video_with_fade = ffmpeg.filter([prev_clip, transitionStream], 'xfade', transition='dissolve', duration=0.3, offset=total_time)
-            prev_clip = video_with_fade
-
-
-
-            #concat_files.append(video_with_fade)
-            
-            # Directly stitch the files together
-            # concat_files.append(ivideostream)
-            # concat_files.append(transitionStream)
-            
-        #concat_files.append(ffmpeg.input(image_video_clip_paths[-1]))  # Append the last image
-        concat_files.append(prev_clip)
-        ffmpeg.concat(*concat_files, v=1, a=0).output(final_video_path, vcodec='libx264', audio_bitrate='192k', r=30, t=audio_duration, pix_fmt='yuv420p').run()
-        print(concat_files)
-        print(image_video_clip_paths)
+        finalRaw = self.crossfade_with_moviepy(image_video_clip_paths, random_transitions, transition_durations)
+        finalRaw.write_videofile(final_video_path, codec="libx264", fps=30)
 
         return final_video_path
 
@@ -298,7 +299,7 @@ class VideoGenerator():
 
 if __name__ == "__main__":
 
-    api_key = os.getenv("elevenlabs_api_key_iyc")
+    api_key = os.getenv("elevenlabs_api_key_uofa")
     current_working_dir = os.getcwd()
     temp_location = "temp/"
     temp_path = os.path.join(current_working_dir, temp_location)
