@@ -217,7 +217,7 @@ function MainComponent() {
         </div>
 
         <Box mb={5}>
-          <FileTextCall apiEndpoint={"http://localhost:8000/generate_video"} supportedFileTypes={["video/mp4", "image/jpeg", "image/png"]} model_id={selectedVoice} />
+          <FileTextCall apiEndpoint={"/generate_video"} supportedFileTypes={["video/mp4", "image/jpeg", "image/png"]} model_id={selectedVoice} />
         </Box>
 
 
