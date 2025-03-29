@@ -5,6 +5,7 @@ from moviepy import *
 import uuid
 import os
 import subprocess
+from pathlib import Path
 import ffmpeg
 import tempfile
 import time
@@ -99,9 +100,9 @@ class VideoGenerator():
         return composite_video
 
     def create_video_from_images(self, images, transition_clips, audio_duration):
-        final_video_path = f"temp/stitched_{str(uuid.uuid4())}.mp4"
+        final_video_path = os.path.join(tempfile.mkdtemp(), f"stitched_{str(uuid.uuid4())}.mp4")
         
-    
+        clip_dir = tempfile.mkdtemp()
         num_images = len(images)
         random_transitions = random.choices(transition_clips, k=num_images-1)
         transition_durations = [self.get_video_duration(clip) for clip in random_transitions]
@@ -115,7 +116,8 @@ class VideoGenerator():
         # then turn them into mp4 clips of calculated duration
         for i, img in enumerate(images):
             crop_filter = self.get_crop_filter(img, 1080, 1920)
-            output = f"app/temp/img_clip_{str(uuid.uuid4())}.mp4"
+            output = os.path.join(clip_dir, f"img_clip_{str(uuid.uuid4())}.mp4")
+            #output = f"app/temp/img_clip_{str(uuid.uuid4())}.mp4"
             istream = ffmpeg.input(img, loop=1, t=image_duration)
 
             crop_filter(istream).filter("fps", fps=30).output(output, vcodec="libx264", pix_fmt="yuv420p", t=image_duration, r=30).run()
@@ -124,6 +126,8 @@ class VideoGenerator():
 
         finalRaw = self.crossfade_with_moviepy(image_video_clip_paths, random_transitions, transition_durations)
         finalRaw.write_videofile(final_video_path, codec="libx264", fps=30)
+
+        self.recursive_delete(clip_dir) # Clean the generated clips
 
         return final_video_path
 
@@ -295,6 +299,22 @@ class VideoGenerator():
         output_video_path = self.add_subtitles_to_video(output_video, audio_and_timings, images=images)
 
         return output_video_path
+    
+    def recursive_delete(folder_path):
+        folder = Path(folder_path)
+        if folder.exists() and folder.is_dir():
+            for item in folder.glob("**/*"):
+                try:
+                    if item.is_file() or item.is_symlink():
+                        item.unlink()
+                    elif item.is_dir():
+                        item.rmdir()  # Only works if the directory is already empty
+                except Exception as e:
+                    print(f"Failed to delete {item}: {e}")
+            try:
+                folder.rmdir()  # Remove the now-empty root folder
+            except Exception as e:
+                print(f"Failed to remove directory {folder}: {e}")
 
 
 if __name__ == "__main__":
