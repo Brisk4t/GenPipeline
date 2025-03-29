@@ -1,5 +1,6 @@
 import base64
 import os
+from typing import List
 import uuid
 import shutil
 import logging
@@ -62,25 +63,27 @@ class VideoApp:
             return FileResponse(os.path.join(self.react_build_path, "index.html"))
 
         @self.app.post("/generate_video")
-        async def generate_video(
-            background_tasks: BackgroundTasks, text: str = Form(...), file: UploadFile = File(...), model_id: str = Form(...)):
+        async def generate_video(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...), text: str = Form(...), model_id: str = Form(...)):
             """Generate a video with subtitles."""
             try:
-                base_video_path = self.save_uploaded_file(file)
+                file_paths = []
+                for file in files:
+                    base_video_path = self.save_uploaded_file(file)
+                    file_paths.append(base_video_path)
+                    mime_type, _ = mimetypes.guess_type(file.filename)
+
                 output_video_filename = self.generate_output_filename(text)
                 output_video_path = os.path.join(self.temp_folder, output_video_filename)
 
-                mime_type, _ = mimetypes.guess_type(file.filename)
+                
 
                 if mime_type:
                     if mime_type.startswith("image/"):  
                         # If the file is an image
-                        return {"message": "Image file detected", "endpoint": "/upload_image"}
+                        generated_video_path = await self.video_generator.generate_subtitles_image(text, file_paths, output_video_path, model_id)
                     
                     elif mime_type.startswith("video/"):  
-                        generated_video_path = await self.video_generator.generate_subtitles_video(
-                            text, base_video_path, output_video_path, model_id
-                        )
+                        generated_video_path = await self.video_generator.generate_subtitles_video(text, base_video_path, output_video_path, model_id)
                 
                
 

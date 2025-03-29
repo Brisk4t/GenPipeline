@@ -98,10 +98,10 @@ class VideoGenerator():
         #final_video = concatenate_videoclips(clips, method="compose")
         return composite_video
 
-    def create_video_from_images(self, image_files_path, transition_clips, audio_duration):
+    def create_video_from_images(self, images, transition_clips, audio_duration):
         final_video_path = f"temp/stitched_{str(uuid.uuid4())}.mp4"
         
-        images = [os.path.abspath(os.path.join(image_files_path, image)) for image in os.listdir(image_files_path)]
+    
         num_images = len(images)
         random_transitions = random.choices(transition_clips, k=num_images-1)
         transition_durations = [self.get_video_duration(clip) for clip in random_transitions]

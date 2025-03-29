@@ -206,7 +206,7 @@ function MainComponent() {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <Container maxWidth="md" sx={{ padding: 3 }}>
+      <Container maxWidth="false" sx={{ padding: 3 }}>
         <Typography variant="h4" gutterBottom>
           Upload Video and Subtitles
         </Typography>
@@ -216,8 +216,8 @@ function MainComponent() {
             <DropDownComponent onSelectionChange={handleSelectionChange} />
         </div>
 
-        <Box mb={3}>
-          <FileTextCall apiEndpoint={"http://localhost:8000/generate_video"} supportedFileTypes={["video/mp4"]} model_id={selectedVoice} />
+        <Box mb={5}>
+          <FileTextCall apiEndpoint={"http://localhost:8000/generate_video"} supportedFileTypes={["video/mp4", "image/jpeg", "image/png"]} model_id={selectedVoice} />
         </Box>
 
 

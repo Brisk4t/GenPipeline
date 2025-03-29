@@ -3,61 +3,86 @@ import { TextField, Button, Alert, CircularProgress, Typography, Box } from "@mu
 
 function FileTextCall({ apiEndpoint, supportedFileTypes, model_id }) {
     const [text, setText] = useState("");
-    const [file, setFile] = useState(null);
-    const [fileType, setFileType] = useState(null);
+    const [files, setFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
-    const [filePreview, setFilePreview] = useState(null);
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [filePreviews, setFilePreviews] = useState([]);
     const [previewHeight, setPreviewHeight] = useState(0);
     const [returnedVideo, setreturnedVideo] = useState(null); // New state for uploaded video URL
+    const [firstFileType, setFirstFileType] = useState(null);
     const previewRef = useRef(null); // Reference to the preview element
 
-    useEffect(() => {
-        // Update the preview container height whenever it changes
-        if (previewRef.current) {
-            setPreviewHeight(previewRef.current.clientHeight);
-        }
-    }, [filePreview]); // Recalculate when the preview changes
+    // useEffect(() => {
+    //     // Update the preview container height whenever it changes
+    //     if (previewRef.current) {
+    //         setPreviewHeight(previewRef.current.clientHeight);
+    //     }
+    // }, [filePreviews]); // Recalculate when the preview changes
 
     
 
-    const handleFileChange = (event) => {
-        const selectedFile = event.target.files[0];
-        console.log("HandleFileChange")
-        if (selectedFile) {
-            const fileType = selectedFile.type;
-                
-            if (supportedFileTypes.includes(fileType)) {
+    const handleFileChange = (e) => {
+        if (e.target.files) {
+            const filesArray = Array.from(e.target.files).map((file) => ({
+                file,
+                url: URL.createObjectURL(file),
+                type: file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "other",
+            }));
+    
+        // Check if the type of the first file matches the new files
+        
+        if (selectedFiles.length === 0){
+            const firstFileType = filesArray[0]?.type;
+            const validFiles = filesArray.filter((file) => file.type === firstFileType);
+            setSelectedFiles(validFiles)
+        }
 
-                setFilePreview(null); 
-                setFile(null);
-                
-                // Set new file and file type
-                setFile(selectedFile);
-                setFileType(fileType.startsWith("image") ? "image" : fileType.startsWith("video") ? "video" : null);
-                
-                // Update preview immediately after the new file is selected
-                setFilePreview(URL.createObjectURL(selectedFile));
-                console.log({filePreview})
+        else{
+            const firstFileType = selectedFiles[0]?.type;
+            const validFiles = filesArray.filter((file) => file.type === firstFileType);
+            const invalidFiles = filesArray.filter((file) => file.type !== firstFileType);
 
-                setError(null);
-            } else {
-                setError(`Unsupported file type. Supported: ${supportedFileTypes.join(", ")}`);
-                setFile(null);
-                setFileType(null);
-                setFilePreview(null);
+            setSelectedFiles((prevFiles) => [...prevFiles, ...validFiles]);
+
+            if(invalidFiles.length > 0){
+                alert("All files must be of the same type as the first file.");
             }
         }
-    };
 
+        }
+      };
+
+
+    const renderPreviews = (files) => {
+        return files.map((fileObj, index) => (
+            <Box key={index} sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "5px" }}>
+                <div key={index} className="preview-container" style={{ margin: "5px", borderRadius: "5px", padding: "1px", backgroundColor: "#f9f9f9", 
+                    objectFit:"cover", height: "200px", width:"200px", overflow: "hidden", position: "relative"}}  >
+                {fileObj.type === "image" && <img src={fileObj.url} alt="Preview" className="preview-media" style={{objectFit: "cover", objectPosition: "center", position:"relative"}} />}
+                {fileObj.type === "video" && (
+                    <video controls className="preview-media">
+                    <source src={fileObj.url} type="video/mp4" style={{objectFit: "cover", objectPosition: "center"}}  />
+                    Your browser does not support the video tag.
+                    </video>
+                )}
+                </div>
+                <div>
+                    <Button variant="outlined" onClick={() => moveFileUp(index)} disabled={index === 0}>Up</Button>
+                    <Button variant="outlined" onClick={() => moveFileDown(index)} disabled={index === selectedFiles.length - 1}>Down</Button>
+                </div>
+            </Box>
+        ));
+    };  
+ 
     const handleTextChange = (event) => {
         setText(event.target.value);
     };
 
     const handleUpload = async () => {
-        if (!file && !text) {
-            setError("Please provide either a file and text.");
+        if (!setSelectedFiles.length && !text) {
+            setError("Please provide a file and text.");
             return;
         }
 
@@ -66,10 +91,12 @@ function FileTextCall({ apiEndpoint, supportedFileTypes, model_id }) {
         setSuccess(null);
 
         const formData = new FormData();
-        if (file) formData.append("file", file);
+        selectedFiles.forEach(({ file }) => formData.append("files", file));
         if (text) formData.append("text", text);
         formData.append("model_id", model_id)
+
         console.log("model_id", model_id)
+        
         try {
             const response = await fetch(apiEndpoint, {
                 method: "POST",
@@ -98,12 +125,30 @@ function FileTextCall({ apiEndpoint, supportedFileTypes, model_id }) {
         }
     };
 
+    const moveFileUp = (index) => {
+        if (index > 0) {
+            const updatedFiles = [...selectedFiles];
+            const [movedFile] = updatedFiles.splice(index, 1);
+            updatedFiles.splice(index - 1, 0, movedFile);
+            setSelectedFiles(updatedFiles);
+        }
+    };
+
+    const moveFileDown = (index) => {
+        if (index < selectedFiles.length - 1) {
+            const updatedFiles = [...selectedFiles];
+            const [movedFile] = updatedFiles.splice(index, 1);
+            updatedFiles.splice(index + 1, 0, movedFile);
+            setSelectedFiles(updatedFiles);
+        }
+    };
+
     const rowHeight = 24; // Approximate row height for Material UI TextField
     const calculatedRows = previewHeight ? Math.max(3, Math.floor(previewHeight / rowHeight)) : 3; // Ensure at least 3 rows
 
     return (
-        <Box sx={{ display: "flex", flexDirection: "row", gap: "20px", alignItems: "flex-start" }}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "10px", flexGrow: 1 }}>
+        <Box sx={{ display: "flex", flexDirection: "row", gap: "20px", alignItems: "flex", justifyContent: "center"}}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: "10px", flexGrow: 1, maxWidth: "md"}}>
                 <TextField
                     placeholder="Enter text here"
                     value={text}
@@ -122,6 +167,7 @@ function FileTextCall({ apiEndpoint, supportedFileTypes, model_id }) {
                     <input
                         type="file"
                         hidden
+                        multiple
                         onChange={handleFileChange}
                         accept={supportedFileTypes.join(", ")}
                     />
@@ -139,26 +185,16 @@ function FileTextCall({ apiEndpoint, supportedFileTypes, model_id }) {
                 {success && <Typography color="success" sx={{ marginTop: "10px" }}>{success}</Typography>}
             </Box>
 
-            {file && (
+            {selectedFiles.length > 0 && (
                 <Box
-                key={filePreview}
+                key={filePreviews}
                 ref={previewRef}
-                sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: "200px", border: "1px solid #ccc", padding: "10px", borderRadius: "4px" }}>
-                    <Typography variant="h6" gutterBottom>Upload Preview</Typography>
-                    {file.type.startsWith("image") ? (
-                        <img src={filePreview} alt="Preview" style={{ width: "100%", height: "auto", maxWidth: "150px", objectFit: "cover" }} />
-                    ) : file.type.startsWith("video") ? (
-                        <video width="100%" height="auto" controls>
-                            <source src={filePreview} type={file.type} />
-                            Your browser does not support the video tag.
-                        </video>
-                    ) : (
-                        <Typography variant="body2" color="textSecondary">No preview available</Typography>
-                    )}
+                sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)",  gap: "10px", maxHeight: "500px", overflowY: "auto", maxWidth:"false"}}>
+                    {renderPreviews(selectedFiles)}
                 </Box>
             )}
             {returnedVideo && (
-                <Box key={returnedVideo} sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: "200px", border: "1px solid #ccc", padding: "10px", borderRadius: "4px" }}>
+                <Box key={returnedVideo} sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: "200px", maxHeight:"500px", border: "1px solid #ccc", padding: "10px", borderRadius: "4px" }}>
                     <Typography variant="h6" gutterBottom>Generated Video</Typography>
                     <video width="100%" height="auto" controls>
                         <source src={returnedVideo} type="video/mp4" />
